@@ -1,4 +1,4 @@
-import React, { useEffect, useReducer, useState } from 'react'
+import React, { useEffect, useReducer, useState, useRef } from 'react'
 import { toast } from 'react-toastify';
 import axios from 'axios';
 
@@ -6,7 +6,8 @@ import { Link, useNavigate } from 'react-router-dom';
 
 import { getError, BASE_URL, LoadingSpinner, Messages, Tiptap, ImageGalleryModal } from '../helpers';
 
-import { useAuth, useCheckbox } from '../../hooks';
+import { useAuth, useCheckbox, useRadio } from '../../hooks';
+import { IconArrowBackCircleSharp, IconCamera, IconSave, IconUpload } from '../../icons';
 
 const reducer = (state, action) => {
   switch (action.type) {
@@ -33,6 +34,7 @@ const reducer = (state, action) => {
 };
 export default function CreateRoom() {
   const navigate = useNavigate();
+  const fileInputRef = useRef(null);
 
   const { axiosInstance, accessToken } = useAuth();
 
@@ -50,16 +52,19 @@ export default function CreateRoom() {
   const [defaultImage, setDafaultImage] = useState({});
   const [images, setImages] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [roomTypes, setRoomTypes] = useState([]);
   const [content, setContent] = useState("<p>Test</p>");
 
   const [checkedItems, checkboxes] = useCheckbox(categories);
+
+  const [selectedId, radios] = useRadio(roomTypes);
 
   const [showModal, setShowModal] = useState(false);
   const handleModalOpen = () => {
     setShowModal(true);
   };
   
-  // Fetch types
+  // Fetch Categories
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -69,6 +74,26 @@ export default function CreateRoom() {
         dispatch({ type: 'FETCH_SUCCESS' });
 
         setCategories(data.data.categories);
+      } catch (err) {
+        dispatch({
+          type: 'FETCH_FAIL',
+          payload: getError(err),
+        });
+      }
+    };
+    fetchData();
+  }, []);
+
+  // Fetch types
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        dispatch({ type: 'FETCH_REQUEST' });
+        const { data } = await axios.get(`${BASE_URL}/room-types`);
+
+        dispatch({ type: 'FETCH_SUCCESS' });
+
+        setRoomTypes(data.data.roomtypes);
       } catch (err) {
         dispatch({
           type: 'FETCH_FAIL',
@@ -95,6 +120,7 @@ export default function CreateRoom() {
           price,
           capacity,
           categories: checkedItems,
+          roomType: selectedId,
         },
         {
           headers: { Authorization: `Bearer ${accessToken}` },
@@ -117,6 +143,11 @@ export default function CreateRoom() {
 
   const fileUploadHandler = async (files) => {
     const formData = new FormData();
+    // Append existing images to formData
+    images.forEach((image) => {
+      formData.append('files', image.secure_url);
+    });
+    // Append new images to formData
     for (let i = 0; i < files.length; i++) {
       formData.append('files', files[i]);
     }
@@ -131,26 +162,31 @@ export default function CreateRoom() {
       });
       dispatch({ type: 'UPLOAD_SUCCESS' });
       toast.success('Upload Success');
-      const urls = data.map(image => ({ secure_url: image.secure_url, public_id: image.public_id }));
-      setImages(urls);
-
+      const urls = data.map((image) => ({ secure_url: image.secure_url, public_id: image.public_id }));
+      // Concatenate existing images with new ones
+      setImages([...images, ...urls]);
+  
       if (urls.length > 0) {
         const firstImageUrl = urls[0];
         setDafaultImage(firstImageUrl);
       }
-
     } catch (err) {
       dispatch({ type: 'UPLOAD_FAIL', payload: getError(err) });
       toast.error(getError(err));
     }
-  }
+  };
 
   const handleFileInputChange = (event) => {
     const files = event.target.files;
     if (files.length > 0) {
       fileUploadHandler(files);
     }
-  }
+  };
+
+  function handleIconClick() {
+    fileInputRef.current.click();
+  };
+  
 
 
   return (
@@ -163,8 +199,8 @@ export default function CreateRoom() {
       ) : (
         <div className="flex flex-wrap">
           
-          <div className="w-full md:w-1/2 mb-4 md:pr-2">
-            <h1 className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2">
+          <div className="w-full mb-4">
+            <h1 className="block uppercase tracking-wide text-gray-700 text-lg font-bold mb-2">
               New Room
             </h1>
           </div>
@@ -225,22 +261,37 @@ export default function CreateRoom() {
           />
         </div>
 
-        <div className="w-full md:w-1/2 mb-4 md:pl-2">
-          <label className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2" htmlFor="category">
-            Category
-          </label>
-            <div className="container mx-auto">
-              {checkboxes}
-              <div>
-                <strong>Selected items:</strong>
-                <ul>
-                  {checkedItems.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
+        <div className="w-full mb-4">
+          <div className="mb-2">
+            <label className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2" htmlFor="category">
+              Room Types
+            </label>
+          </div>
+          <div className="flex flex-wrap">
+            {radios}
+            <p>Selected ID: {selectedId}</p>
+          </div>
         </div>
+
+        <div className="w-full mb-4">
+          <div className="mb-2">
+            <label className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2" htmlFor="perks">
+              Room Perks
+            </label>
+          </div>
+          <div className="flex flex-wrap">
+            {checkboxes}
+            <div>
+              <p>Selected items:</p>
+              <ul>
+                {checkedItems.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+
 
         <div className="w-full mb-4">
           <label className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2" htmlFor="summary">
@@ -257,12 +308,14 @@ export default function CreateRoom() {
 
         <div className="w-full mb-4">
           <label className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2" htmlFor="image">
-            Image
+            Upload Images
           </label>
-          <input type="file" multiple onChange={handleFileInputChange} id="image" className="hidden" />
-          <label htmlFor="image" className={`block w-full md:w-1/2 mb-4 md:pr-2 md:float-left cursor-pointer bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded ${loadingUpload ? 'pointer-events-none' : ''}`} >
-            Upload Image
-          </label>
+          <input type="file" multiple onChange={handleFileInputChange} id="image" className="hidden" ref={fileInputRef} />
+
+          <div className={`mb-4 ${loadingUpload ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`} onClick={!loadingUpload ? handleIconClick : undefined}>
+            <IconUpload title="Upload Images" />
+          </div>
+
           <div className="flex items-center justify-center w-full md:w-1/2 mb-4 md:pl-2">
             <div id="image-preview" className="w-full p-2 rounded-lg border border-gray-300">
               <img id="preview" className="w-full h-auto" src={defaultImage.secure_url} alt="Image Preview" />
@@ -280,7 +333,9 @@ export default function CreateRoom() {
         <label className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2" htmlFor="media">
           Manage Media
         </label>
-        <button className={`ml-2 bg-green-700 hover:bg-green-900 text-white font-bold py-2 px-4 rounded`} onClick={handleModalOpen}>Media Manager</button>
+        <div className={`mb-4 ${loadingUpload ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`} onClick={!loadingUpload ? handleModalOpen : undefined}>
+          <IconCamera title="Manage Images" />
+        </div>
         <ImageGalleryModal id="media" setDafaultImage={setDafaultImage} setImages={setImages} showModal={showModal} setShowModal={setShowModal} images={images} defaultImage={defaultImage} />
       </div>
 
@@ -291,16 +346,17 @@ export default function CreateRoom() {
         <Tiptap setContent={setContent} content={content} />
       </div>
 
-      <div className="mb-4">
-          <button onClick={createHandler} disabled={loadingCreate} className={`bg-green-700 hover:bg-green-900 text-white font-bold py-2 px-4 rounded ${loadingCreate ? 'opacity-50 cursor-not-allowed' : ''}`} type="button" >
-              Create
-          </button>
-        <Link to={`/admin/rooms`}>
-            <button className="ml-2 bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
-                Cancel
-            </button>
-        </Link>
+      <div className="flex mb-4">
+        <div className={`mb-4 ${loadingCreate ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`} onClick={!loadingCreate ? createHandler : undefined}>
+          <IconSave title="Save the room" />
+        </div>
+        <div className="ml-4">
+          <Link to={`/admin/rooms`}>
+            <IconArrowBackCircleSharp title="Back to all rooms" />
+          </Link>
+        </div>
       </div>
+
 
     </div>
   )

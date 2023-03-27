@@ -152,7 +152,6 @@ export const Tiptap = ({ setContent, content }) => {
     onUpdate: ({ editor }) => {
       const json = editor.getJSON();
       setContent(json);
-      console.log(json)
     },
   });
 

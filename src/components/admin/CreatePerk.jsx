@@ -8,8 +8,9 @@ import { getError, BASE_URL, LoadingSpinner, Messages } from '../helpers';
 import { useAuth } from '../../hooks';
 
 import { createReducer } from '../../state/Reducers';
+import { IconArrowBackCircleSharp, IconSave } from '../../icons';
 
-export default function CreateCategory() {
+export default function CreatePerk() {
   const navigate = useNavigate();
 
   const { axiosInstance, accessToken } = useAuth();
@@ -40,7 +41,7 @@ export default function CreateCategory() {
       );
       createDispatch({ type: 'CREATE_SUCCESS', payload: data.data.category });
       toast.success(data.message);
-      navigate(`/admin/rooms`);
+      navigate(`/admin/perks`);
     } catch (err) {
         createDispatch({ type: 'CREATE_FAIL', payload: getError(err), });
     }
@@ -62,24 +63,10 @@ export default function CreateCategory() {
         {createState.error && <Messages>{createState.error}</Messages>}
         <div className="flex flex-wrap">
           
-          <div className="w-full md:w-1/2 mb-4 md:pr-2">
-            <h1 className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2">
-              Create Category
+          <div className="w-full mb-4">
+            <h1 className="block uppercase tracking-wide text-gray-700 text-lg font-bold mb-2">
+              New Perk
             </h1>
-          </div>
-
-          <div className="w-full md:w-1/2 mb-4 md:pr-2">
-              <div className="flex flex-wrap">
-
-                  <div className="w-full md:w-1/2 mb-4 md:pr-2">
-                      <Link href={`dashboard/admin/categories`}>
-                          <button className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
-                              Categories
-                          </button>
-                      </Link>
-                  </div>
-
-              </div>
           </div>
 
         </div>
@@ -107,17 +94,23 @@ export default function CreateCategory() {
             className="appearance-none block w-full bg-gray-200 text-gray-700 border border-gray-200 rounded py-3 px-4 leading-tight focus:outline-none focus:bg-white focus:border-gray-500" 
             id="slug" 
             type="text" 
-            placeholder="Example... structure-name"
+            placeholder="slug"
             onChange={(e) => generateSlug(e.target.value)}
           />
         </div>
 
       </form>
 
-      <div className="mb-4">
-          <button onClick={createHandler} disabled={createState.loading} className={`bg-green-700 hover:bg-green-900 text-white font-bold py-2 px-4 rounded ${createState.loading ? 'opacity-50 cursor-not-allowed' : ''}`} type="button" >
-              Create
-          </button>
+      <div className="flex mb-4">
+        <div className={`mb-4 ${createState.loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`} onClick={!createState.loading ? createHandler : undefined}>
+          <IconSave title="Save the perk" />
+        </div>
+        <div className="ml-4">
+          <Link to={`/admin/perks`}>
+            <IconArrowBackCircleSharp title="Back to all perks" />
+          </Link>
+       
+        </div>
       </div>
       
     </div>

@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom';
 import { getError, BASE_URL, LoadingSpinner, Messages } from '../helpers';
 
 import { useAuth } from '../../hooks';
-import { IconAddCircle, IconArrowBackCircleSharp, IconDelete, IconEdit, IconViewShow } from '../../icons';
+import { IconAddCircle, IconArrowBackCircleSharp, IconDelete, IconEdit } from '../../icons';
 
 const reducer = (state, action) => {
   switch (action.type) {
@@ -15,7 +15,7 @@ const reducer = (state, action) => {
     case 'FETCH_SUCCESS':
       return {
         ...state,
-        rooms: action.payload.data.rooms,
+        categories: action.payload.data.categories,
         loading: false,
       };
     case 'FETCH_FAIL':
@@ -36,15 +36,13 @@ const reducer = (state, action) => {
       return state;
   }
 };
-export default function Rooms() {
-
-  const first30 = /^([\w'-]+(?:\s+[\w'-]+){0,29})/;
+export default function Perks() {
   const first20 = /^([\w'-]+(?:\s+[\w'-]+){0,19})/;
 
   const { axiosInstance, accessToken } = useAuth();
 
   
-  const [{ loading, error, rooms, loadingDelete, 
+  const [{ loading, error, categories, loadingDelete, 
     successDelete }, dispatch] =
     useReducer(reducer, {
       loading: true,
@@ -55,7 +53,7 @@ export default function Rooms() {
     const fetchData = async () => {
         try {
         const { data } = await axiosInstance.get(
-            `${BASE_URL}/rooms`, {
+            `${BASE_URL}/categories`, {
             headers: { Authorization: `Bearer ${accessToken}` },
             });
         dispatch({ type: 'FETCH_SUCCESS', payload: data });
@@ -75,11 +73,11 @@ export default function Rooms() {
     }, [successDelete, accessToken]);
 
   // Delete Handler
-  const deleteHandler = async (product) => {
+  const deleteHandler = async (category) => {
     if (window.confirm('Are you sure you want to delete?')) {
         try {
         dispatch({ type: 'DELETE_REQUEST' });
-        const {data} = await axiosInstance.delete(`${BASE_URL}/rooms/${product._id}`, {
+        const {data} = await axiosInstance.delete(`${BASE_URL}/categories/${category._id}`, {
             headers: { Authorization: `Bearer ${accessToken}` },
         });
         dispatch({ type: 'DELETE_SUCCESS', payload: data });
@@ -98,7 +96,7 @@ export default function Rooms() {
       {/* Top Section */}
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="py-8">
-                <h1 class="text-3xl font-bold text-gray-900">Manage Rooms</h1>
+                <h1 class="text-3xl font-bold text-gray-900">Manage Perks</h1>
                 <div class="mt-4">
                 <div class="flex flex-wrap -mx-4 mt-4">
 
@@ -109,8 +107,8 @@ export default function Rooms() {
                     </div>
 
                     <div class="w-full md:w-1/2 px-4 mb-4 md:mb-0 p-6">
-                          <Link to={`/admin/rooms/create`}>
-                              <IconAddCircle title="Add a new room" />
+                          <Link to={`/admin/perks/create`}>
+                              <IconAddCircle title="Add a new perk" />
                           </Link>
                     </div>
                     
@@ -126,35 +124,25 @@ export default function Rooms() {
         ) : (
         <div class="flex flex-wrap">
 
-            {rooms.map((room) => (
-            <div key={room._id} class="w-full md:w-1/2 lg:w-1/3 px-2 mb-4">
+            {categories.map((category) => (
+            <div key={category._id} class="w-full md:w-1/2 lg:w-1/3 px-2 mb-4">
                 <div class="bg-white shadow-md rounded-md overflow-hidden">
                   <div class="bg-gray-200 px-4 py-2">
-                      <h2 class="text-lg font-semibold text-gray-700">{room.title.match(first20)[1]}</h2>
+                      <h2 class="text-lg font-semibold text-gray-700">{category.title.match(first20)[1]}</h2>
                   </div>
                   <div class="px-4 py-2">
                       <ul class="divide-y divide-gray-300">
 
                       <li class="py-2 flex">
-                          <div class="flex-shrink-0">
-                              <img src={room.defaultImage.secure_url} alt={room.title} class="w-16 h-16 rounded-md" />
-                          </div>
                           <div class="ml-4">
-                              <h3 class="text-lg font-semibold text-gray-700 mb-2">{room.categories[0]?.title}</h3>
-                              <p class="text-gray-500">{room.summary.match(first30)[1]}</p>
                               <div class="flex mt-2">
-                              <Link to={`/rooms/${room.slug}`}>
+                              <Link to={`/admin/rooms/edit/${category._id}`} state={category}>
                                 <button class="px-3 py-1 bg-gray-200 text-gray-700 rounded-md mr-2">
-                                    <IconViewShow title='view the room' />
+                                   <IconEdit title='edit perk' />
                                 </button>
                               </Link>
-                              <Link to={`/admin/rooms/edit/${room._id}`} state={room}>
-                                <button class="px-3 py-1 bg-gray-200 text-gray-700 rounded-md mr-2">
-                                    <IconEdit title='edit room' />
-                                </button>
-                              </Link>
-                              <button onClick={() => deleteHandler(room)} class="px-3 py-1 bg-gray-200 text-gray-700 rounded-md">
-                                  <IconDelete title='delete room' />
+                              <button onClick={() => deleteHandler(category)} class="px-3 py-1 bg-gray-200 text-gray-700 rounded-md">
+                                  <IconDelete title='delete perk' />
                               </button>
                               </div>
                           </div>

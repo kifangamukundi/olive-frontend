@@ -1,4 +1,5 @@
-import React, {  useReducer, useEffect, useState, useMemo } from 'react'
+import React, {  useReducer, useEffect, useState, useMemo, useRef } from 'react'
+import axios from 'axios';
 import { toast } from 'react-toastify';
 
 import { generateHTML } from '@tiptap/html';
@@ -6,27 +7,21 @@ import StarterKit from '@tiptap/starter-kit';
 import Underline from "@tiptap/extension-underline";
 import Highlight from "@tiptap/extension-highlight";
 
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 
-import { getError, BASE_URL, LoadingSpinner, Messages } from '../helpers';
+import { getError, BASE_URL, LoadingSpinner, Messages, Tiptap, ImageGalleryModal } from '../helpers';
 
-import { useAuth, useCheckbox } from '../../hooks';
+import { useAuth, useCheckbox, useRadio } from '../../hooks';
+
+import { IconArrowBackCircleSharp, IconCamera, IconSave, IconUpload } from '../../icons';
+
 
 const reducer = (state, action) => {
     switch (action.type) {
-    case 'FETCH_REQUEST':
-        return { ...state, loading: true };
-        case 'FETCH_SUCCESS':
-        return {
-            ...state,
-            room: action.payload,
-            loading: false,
-        };
-        case 'FETCH_FAIL':
       case 'UPDATE_REQUEST':
         return { ...state, loadingUpdate: true };
       case 'UPDATE_SUCCESS':
-        return { ...state, loadingUpdate: false, room: action.payload.room };
+        return { ...state, loadingUpdate: false, product: action.payload.product };
       case 'UPDATE_FAIL':
         return { ...state, loadingUpdate: false, error: action.payload };
       case 'UPLOAD_REQUEST':
@@ -44,78 +39,78 @@ const reducer = (state, action) => {
         return state;
     }
   };
+
 export default function EditRoom() {
-    const { id } = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const fileInputRef = useRef(null);
+  const room = location.state;
 
-    const { axiosInstance, accessToken } = useAuth();
+  const initialState = room;
 
-    const [{ error, loadingUpdate, loadingUpload }, dispatch] =
-    useReducer(reducer, {
+  const { axiosInstance, accessToken } = useAuth();
+
+  const [{ error, loadingUpdate, loadingUpload }, dispatch] =
+  useReducer(reducer, {
     error: '',
-    });
+  });
 
-    const [image, setImage] = useState('');
-    const [images, setImages] = useState([]);
-    const [content, setContent] = useState({
-        "type": "doc",
-        "content": [
-            {
-                "type": "paragraph",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": "test"
-                    }
-                ]
-            }
-        ]
-    });
-    const [categories, setCategories] = useState([]);
-    const [newCategories, setNewCategories] = useState([]);
-    const [initialState, setInitialState] = useState({})
+  const [defaultImage, setDafaultImage] = useState(room.defaultImage);
+  const [images, setImages] = useState(room.otherImages);
+  const [content, setContent] = useState(room.content);
+  const [categories, setCategories] = useState([]);
+  const [roomTypes, setRoomTypes] = useState([]);
+  const [newCategories, setNewCategories] = useState([]);
 
-    const [showModal, setShowModal] = useState(false);
-    const handleModalOpen = () => {
+  const [item, setItem] = useState(initialState);
+
+  const [showModal, setShowModal] = useState(false);
+  const handleModalOpen = () => {
     setShowModal(true);
-    };
-    const [checkedItems, checkboxes] = useCheckbox(newCategories, preSelectedIds);
+  };
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-            dispatch({ type: 'FETCH_REQUEST' });
-            const { data } = await axios.get(`${BASE_URL}/rooms/${id}`);
-    
-            dispatch({ type: 'FETCH_SUCCESS' });
-            setInitialState(data.data.room);
-            console.log(data)
-            const preSelectedIds =initialState.categories.map(item => item._id);
-            } catch (err) {
-            dispatch({
-                type: 'FETCH_FAIL',
-                payload: getError(err),
-            });
-            }
-        };
-        fetchData();
-        }, []);
+  const preSelectedIds =room.categories.map(item => item._id);
+  const [checkedItems, checkboxes] = useCheckbox(newCategories, preSelectedIds);
 
-    const addCheckedProperty = (options, selectedIds) => {
+  const [selectedId, radios] = useRadio(roomTypes, room.roomType);
+
+
+
+  const addCheckedProperty = (options, selectedIds) => {
     return options.map((option) => {
-        if (selectedIds.includes(option._id)) {
+      if (selectedIds.includes(option._id)) {
         return { ...option, checked: true };
-        } else {
+      } else {
         return { ...option, checked: false };
-        }
+      }
     });
-    };
+  };
 
-    
-    // Fetch categories
-
-    useEffect(() => {
+  
+  // Fetch types
+  useEffect(() => {
     const fetchData = async () => {
-        try {
+      try {
+        dispatch({ type: 'FETCH_REQUEST' });
+        const { data } = await axios.get(`${BASE_URL}/room-types`);
+
+        dispatch({ type: 'FETCH_SUCCESS' });
+
+        setRoomTypes(data.data.roomtypes);
+      } catch (err) {
+        dispatch({
+          type: 'FETCH_FAIL',
+          payload: getError(err),
+        });
+      }
+    };
+    fetchData();
+  }, []);
+
+  // Fetch categories
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
         dispatch({ type: 'FETCH_REQUEST' });
         const { data } = await axios.get(`${BASE_URL}/categories`);
 
@@ -124,66 +119,115 @@ export default function EditRoom() {
         setCategories(data.data.categories);
         const newcollection = addCheckedProperty(data.data.categories, preSelectedIds)
         setNewCategories(newcollection)
-        } catch (err) {
+      } catch (err) {
         dispatch({
-            type: 'FETCH_FAIL',
-            payload: getError(err),
+          type: 'FETCH_FAIL',
+          payload: getError(err),
         });
-        }
+      }
     };
     fetchData();
-    }, []);
+  }, []);
 
-    // Testing
-
-    const [item, setItem] = useState(initialState);
-
-    const handleChange = (e) => {
+  const handleChange = (e) => {
     const { name, value } = e.target;
     setItem(prevItem => ({
-        ...prevItem,
-        [name]: name === 'otherImages' ? value.split(',') : value
+      ...prevItem,
+      [name]: name === 'otherImages' ? value.split(',') : value
     }));
-    };
+  };
 
 
-    const handleSubmit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     // Only include fields that have been changed
     const updatedFields = {};
     for (const key in item) {
-        if (item[key] !== initialState[key]) {
+      if (item[key] !== initialState[key]) {
         updatedFields[key] = item[key];
-        }
+      }
     }
 
     const updates = {
-        ...updatedFields,
-        content,
-        categories: checkedItems,
+      ...updatedFields,
+      content,
+      categories: checkedItems,
+      roomType: selectedId,
+      defaultImage,
+      otherImages: images,
     }
 
     try {
-        dispatch({ type: 'UPDATE_REQUEST' });
-        const { data } = await axiosInstance.patch(`${BASE_URL}/products/${product._id}`, updates, {
+      dispatch({ type: 'UPDATE_REQUEST' });
+      const { data } = await axiosInstance.patch(`${BASE_URL}/rooms/${room._id}`, updates, {
         headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        dispatch({ type: 'UPDATE_SUCCESS', payload: data });
-        toast.success(data.message);
-        router.push(`/dashboard/admin/products`);
+      });
+      dispatch({ type: 'UPDATE_SUCCESS', payload: data });
+      toast.success(data.message);
+      navigate(`/admin/rooms`);
     } catch (err) {
-        dispatch({ type: 'UPDATE_FAIL', payload: getError(err) });
+      dispatch({ type: 'UPDATE_FAIL', payload: getError(err) });
     }
-    };
+  };
 
-    const output = useMemo(() => {
-        return generateHTML(content, [
-            StarterKit,
-            Underline,
-            Highlight.configure({multicolor: true}),
-        ])
-        }, []);
+  const fileUploadHandler = async (files) => {
+    const formData = new FormData();
+    // Append existing images to formData
+    images.forEach((image) => {
+      formData.append('files', image.secure_url);
+    });
+    // Append new images to formData
+    for (let i = 0; i < files.length; i++) {
+      formData.append('files', files[i]);
+    }
+  
+    try {
+      dispatch({ type: 'UPLOAD_REQUEST' });
+      const { data } = await axios.post(`${BASE_URL}/uploads/new-media`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          authorization: `Bearer ${accessToken}`,
+        },
+      });
+      dispatch({ type: 'UPLOAD_SUCCESS' });
+      toast.success('Upload Success');
+      const urls = data.map((image) => ({ secure_url: image.secure_url, public_id: image.public_id }));
+      // Concatenate existing images with new ones
+      setImages([...images, ...urls]);
+  
+      if (urls.length > 0) {
+        const firstImageUrl = urls[0];
+        setDafaultImage(firstImageUrl);
+      }
+    } catch (err) {
+      dispatch({ type: 'UPLOAD_FAIL', payload: getError(err) });
+      toast.error(getError(err));
+    }
+  };
+  
+
+  const handleFileInputChange = (event) => {
+    const files = event.target.files;
+    if (files.length > 0) {
+      fileUploadHandler(files);
+    }
+  };
+
+  function handleIconClick() {
+    fileInputRef.current.click();
+  };
+
+
+  const output = useMemo(() => {
+      return generateHTML(content, [
+          StarterKit,
+          Underline,
+          Highlight.configure({multicolor: true}),
+      ])
+      }, []);
+
+    
   return (
     <div className="container w-full md:max-w-3xl mx-auto pt-20">
       
@@ -193,34 +237,13 @@ export default function EditRoom() {
         <Messages>{error}</Messages>
       ) : (
         <div className="flex flex-wrap">
-          
-          <div className="w-full md:w-1/2 mb-4 md:pr-2">
-            <h1 className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2">
-              Create New Structure
+
+          <div className="w-full mb-4">
+            <h1 className="block uppercase tracking-wide text-gray-700 text-lg font-bold mb-2">
+              Editing: {room.title}
             </h1>
           </div>
 
-          <div className="w-full md:w-1/2 mb-4 md:pr-2">
-              <div className="flex flex-wrap">
-
-                  <div className="w-full md:w-1/2 mb-4 md:pr-2">
-                      <Link href={`dashboard/admin/products`}>
-                          <button className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
-                              Structures
-                          </button>
-                      </Link>
-                  </div>
-
-                  <div className="w-full md:w-1/2 mb-4 md:pr-2">
-                      <Link href={`dashboard/admin/products`}>
-                          <button className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
-                              Preview
-                          </button>
-                      </Link>
-                  </div>
-
-              </div>
-          </div>
 
         </div>
       )}
@@ -258,22 +281,64 @@ export default function EditRoom() {
         </div>
 
         <div className="w-full md:w-1/2 mb-4 md:pl-2">
-          <label className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2" htmlFor="category">
-            Category
+          <label className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2" htmlFor="price">
+            Price
           </label>
-          {/* testing */}
-            <div className="container mx-auto">
-              <h1 className="text-2xl font-bold">Checkbox List</h1>
-              {checkboxes}
-              <div>
-                <strong>Selected items:</strong>
-                <ul>
-                  {checkedItems.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              </div>
+          <input 
+            className="appearance-none block w-full bg-gray-200 text-gray-700 border border-gray-200 rounded py-3 px-4 leading-tight focus:outline-none focus:bg-white focus:border-gray-500" 
+            id="price" 
+            type="text"
+            value={item.price}
+            name='price'
+            placeholder="price"
+            onChange={handleChange}
+          />
+        </div>
+
+        <div className="w-full md:w-1/2 mb-4 md:pl-2">
+          <label className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2" htmlFor="capacity">
+            Capacity
+          </label>
+          <input 
+            className="appearance-none block w-full bg-gray-200 text-gray-700 border border-gray-200 rounded py-3 px-4 leading-tight focus:outline-none focus:bg-white focus:border-gray-500" 
+            id="capacity" 
+            type="text" 
+            value={item.capacity}
+            name='capacity'
+            placeholder="capacity"
+            onChange={handleChange}
+          />
+        </div>
+
+        <div className="w-full mb-4">
+          <div className="mb-2">
+            <label className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2" htmlFor="category">
+              Room Types
+            </label>
+          </div>
+          <div className="flex flex-wrap">
+            {radios}
+            <p>Selected ID: {selectedId}</p>
+          </div>
+        </div>
+
+        <div className="w-full mb-4">
+          <div className="mb-2">
+            <label className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2" htmlFor="perks">
+              Room Perks
+            </label>
+          </div>
+          <div className="flex flex-wrap">
+            {checkboxes}
+            <div>
+              <p>Selected items:</p>
+              <ul>
+                {checkedItems.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
             </div>
+          </div>
         </div>
 
         <div className="w-full mb-4">
@@ -293,23 +358,36 @@ export default function EditRoom() {
 
         <div className="w-full mb-4">
           <label className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2" htmlFor="image">
-            Image
+            Upload Images
           </label>
-          <input type="file" id="image" className="hidden" />
-          <label htmlFor="image" className="block w-full md:w-1/2 mb-4 md:pr-2 md:float-left cursor-pointer bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
-            Upload Image
-          </label>
+          <input type="file" multiple onChange={handleFileInputChange} id="image" className="hidden" ref={fileInputRef} />
+
+          <div className={`mb-4 ${loadingUpload ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`} onClick={!loadingUpload ? handleIconClick : undefined}>
+            <IconUpload title="Upload Images" />
+          </div>
+
           <div className="flex items-center justify-center w-full md:w-1/2 mb-4 md:pl-2">
             <div id="image-preview" className="w-full p-2 rounded-lg border border-gray-300">
-              <img id="preview" className="w-full h-auto" src="" alt="Image Preview" />
+              <img id="preview" className="w-full h-auto" src={defaultImage.secure_url} alt="Image Preview" />
               <div id="no-preview" className="hidden">
                 No image selected.
               </div>
+              {loadingUpload && <LoadingSpinner></LoadingSpinner>}
             </div>
           </div>
         </div>
 
       </form>
+
+      <div className="w-full mb-4">
+        <label className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2" htmlFor="media">
+          Manage Media
+        </label>
+        <div className={`mb-4 ${loadingUpload ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`} onClick={!loadingUpload ? handleModalOpen : undefined}>
+          <IconCamera title="Manage Images" />
+        </div>
+        <ImageGalleryModal id="media" setDafaultImage={setDafaultImage} setImages={setImages} showModal={showModal} setShowModal={setShowModal} images={images} defaultImage={defaultImage} />
+      </div>
 
       <div className="w-full mb-4">
         <label className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2" htmlFor="content">
@@ -318,16 +396,16 @@ export default function EditRoom() {
         <Tiptap setContent={setContent} content={output} />
       </div>
 
-      <div className="mb-4">
-          <button onClick={handleSubmit} disabled={loadingUpdate} className={`bg-green-700 hover:bg-green-900 text-white font-bold py-2 px-4 rounded ${loadingUpdate ? 'opacity-50 cursor-not-allowed' : ''}`} type="button" >
-              Update
-          </button>
+      <div className="flex mb-4">
+        <div className={`mb-4 ${loadingUpdate ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`} onClick={!loadingUpdate ? handleSubmit : undefined}>
+          <IconSave title="Update the room" />
+        </div>
+        <div className="ml-4">
+          <Link to={`/admin/rooms`}>
+            <IconArrowBackCircleSharp title="Back to all rooms" />
+          </Link>
+        </div>
       </div>
-
-      {/* Am testing the gallery */}
-
-      <button onClick={handleModalOpen}>Open Gallery Modal</button>
-      <ImageGalleryModal setImages={setImages} showModal={showModal} setShowModal={setShowModal} images={images} />
       
     </div>
   )

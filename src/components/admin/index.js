@@ -1,15 +1,25 @@
 import Dashboard from "./Dashboard";
+
 import Rooms from "./Rooms";
 import CreateRoom from "./CreateRoom";
-
-import CreateCategory from "./CreateCategory";
 import EditRoom from "./EditRoom";
+
+import Perks from "./Perks";
+import CreatePerk from "./CreatePerk";
+
+import CreateRoomType from "./CreateRoomType";
+import Types from "./Types";
 
 export {
     Dashboard,
+
     Rooms,
     CreateRoom,
-
-    CreateCategory,
     EditRoom,
+
+    Perks,
+    CreatePerk,
+
+    CreateRoomType,
+    Types,
 }

@@ -8,7 +8,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import { Home } from './components/pages';
 import { Navbar, Footer } from './components/layout';
 import { ActivateAccount, ForgotPassword, Login, PasswordReset, Register } from './components/authentication';
-import { CreateCategory, CreateRoom, Dashboard, EditRoom, Rooms } from "./components/admin";
+import { CreatePerk, CreateRoom, CreateRoomType, Dashboard, EditRoom, Perks, Rooms, Types } from "./components/admin";
 
 function App() {
 
@@ -48,7 +48,11 @@ function App() {
                   <Route path="/admin/rooms/edit/:id" element={<EditRoom/>} />
 
                   
-                  <Route path="/admin/categories/create" element={<CreateCategory/>} />
+                  <Route path="/admin/perks" element={<Perks/>} />
+                  <Route path="/admin/perks/create" element={<CreatePerk/>} />
+
+                  <Route path="/admin/room-types" element={<Types/>} />
+                  <Route path="/admin/room-types/create" element={<CreateRoomType/>} />
 
                 </Routes>
 
