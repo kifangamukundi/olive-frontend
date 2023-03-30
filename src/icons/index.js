@@ -7,6 +7,9 @@ import { IconViewDashboard }from './IconViewDashboard';
 import { IconViewShow }from './IconViewShow';
 import { IconEdit }from './IconEdit';
 import { IconDelete }from './IconDelete';
+import { IconMoneyDollarCircleFill }from './IconMoneyDollarCircleFill';
+import { IconCheckCircle }from './IconCheckCircle';
+
 
 
 export {
@@ -19,4 +22,6 @@ export {
     IconViewShow,
     IconEdit,
     IconDelete,
+    IconMoneyDollarCircleFill,
+    IconCheckCircle,
 }

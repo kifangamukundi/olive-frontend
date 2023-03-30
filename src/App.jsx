@@ -5,7 +5,7 @@ import styles from './styles/styles';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-import { Home } from './components/pages';
+import { Book, Home } from './components/pages';
 import { Navbar, Footer } from './components/layout';
 import { ActivateAccount, ForgotPassword, Login, PasswordReset, Register } from './components/authentication';
 import { CreatePerk, CreateRoom, CreateRoomType, Dashboard, EditRoom, Perks, Rooms, Types } from "./components/admin";
@@ -53,6 +53,8 @@ function App() {
 
                   <Route path="/admin/room-types" element={<Types/>} />
                   <Route path="/admin/room-types/create" element={<CreateRoomType/>} />
+
+                  <Route path="/book/:id" element={<Book/>} />
 
                 </Routes>
 
