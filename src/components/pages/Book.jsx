@@ -48,6 +48,12 @@ const [fetchState, fetchDispatch] = useReducer(fetchReducer, {
     loading: false,
     error: null,
     });
+
+const [predictState, predictDispatch] = useReducer(fetchReducer, {
+    data: [],
+    loading: false,
+    error: null,
+    });
 // stk push state
 const [stkPushState, stkPushDispatch] = useReducer(createReducer, {
     data: [],
@@ -123,6 +129,27 @@ useEffect(() => {
 
          } catch (err) {
             stkPushDispatch({ type: 'CREATE_FAIL', payload: getError(err), });
+        }
+    };
+
+    const handlePrediction = async (e) => {
+        e.preventDefault();
+        try {
+            predictDispatch({ type: 'CREATE_REQUEST' });
+            const {data} = await axiosInstance.post(
+                `${BASE_URL}/predictions`,
+                {
+                  price: 1,
+                },
+                {
+                  headers: { Authorization: `Bearer ${accessToken}` },
+                }
+              );
+            
+            predictDispatch({ type: 'CREATE_SUCCESS', payload: data.data.result });
+
+         } catch (err) {
+            predictDispatch({ type: 'CREATE_FAIL', payload: getError(err), });
         }
     };
 
